@@ -36,9 +36,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route 
               path="/jadwal" 
               element={
-                <ProtectedRoute>
-                  <Jadwal />
-                </ProtectedRoute>
+                <Jadwal />
               } 
             />
             

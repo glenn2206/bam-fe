@@ -4,7 +4,6 @@ import PilihJadwal from '../components/PilihJadwal';
 import { db } from '../helper';
 import { useAuth } from '../contexts/AuthContext';
 import { useBooking } from '../hooks/useBooking';
-import AuthPopup from '../components/AuthPopup';
 
 const Booking = () => {
   const isFromFetch = useRef(false); // Flag untuk tandai perubahan dari fetch
@@ -24,13 +23,6 @@ const Booking = () => {
 
   const { user } = useAuth();
   const { fetchUnits, saveUnits, getBookedSchedules } = useBooking();
-  const [showAuth, setShowAuth] = useState(false);
-  useEffect(() => {
-    // Jika tidak ada user, tampilkan popup login
-    if (!user) {
-      setShowAuth(true);
-    }
-  }, [user]);
 
   // Fetch all bookings (global schedules)
   useEffect(() => {
@@ -187,23 +179,7 @@ const Booking = () => {
 
   const activeUnit = units.find(u => u.id === activeUnitId) || {};
 
-return (
-  <>
-  <div className="p-8">
-      {/* Jika Belum Login, Tampilkan Blur / Overlay */}
-      {!user && (
-        <div className="fixed inset-0 bg-white/10 backdrop-blur-md z-40 flex items-center justify-center">
-          <p className="font-bold text-slate-400">Silakan Login untuk Akses Halaman Ini</p>
-        </div>
-      )}
-
-      {/* Konten Utama */}
-      <h1 className="text-2xl font-bold">Halaman Booking Lab</h1>
-      {/* ... Form Booking Anda ... */}
-
-      {/* Popup Login */}
-      <AuthPopup isOpen={showAuth} onClose={() => setShowAuth(false)} />
-    </div>
+  return (
     <div className="max-w-7xl mx-auto my-4 md:my-8 font-sans px-4">
       
       {/* HEADER UTAMA */}
@@ -443,7 +419,6 @@ return (
           onUpdate={handleUpdateJadwal}
       />
     </div>
-  </>
   );
 };
 
