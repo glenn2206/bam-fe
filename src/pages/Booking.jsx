@@ -195,68 +195,7 @@ const Booking = () => {
           )}
         </h2>
         
-        <div className="flex gap-2">
-          {/* Tombol Manual Save */}
-          <button 
-            onClick={async () => {
-              if (!user) {
-                alert('Silakan login terlebih dahulu');
-                return;
-              }
-              
-              setIsSaving(true);
-              try {
-                await saveUnits(units);
-                alert('✅ Data berhasil disimpan!');
-              } catch (err) {
-                alert('❌ Gagal menyimpan: ' + err.message);
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-            disabled={isSaving || isLoading}
-            className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-bold shadow-md transition-all uppercase text-xs"
-          >
-            💾 Save Now
-          </button>
-          
-          {/* Tombol Refresh/Reload Data */}
-          <button 
-            onClick={async () => {
-              if (!user) {
-                alert('Silakan login terlebih dahulu');
-                return;
-              }
-
-              if (!confirm('Reload data dari server? Perubahan yang belum disimpan akan hilang.')) {
-                return;
-              }
-
-              setIsLoading(true);
-              try {
-                const savedData = await fetchUnits();
-                
-                // TANDAI bahwa perubahan berasal dari FETCH
-                isFromFetch.current = true;
-                
-                if (savedData && Array.isArray(savedData) && savedData.length > 0) {
-                  setUnits(savedData);
-                  alert('✅ Data berhasil di-reload!');
-                } else {
-                  alert('ℹ️ Tidak ada data di server');
-                }
-              } catch (err) {
-                alert('❌ Gagal reload: ' + err.message);
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            disabled={isSaving || isLoading}
-            className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-bold shadow-md transition-all uppercase text-xs"
-          >
-            🔄 Reload
-          </button>
-        </div>
+  
       </div>
 
       {/* LOOPING UNITS */}
