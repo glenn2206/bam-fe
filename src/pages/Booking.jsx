@@ -86,22 +86,29 @@ export default function Booking() {
   // Load data effect - hanya run SEKALI saat mount atau user berubah
   useEffect(() => {
     const loadData = async () => {
-      if (!user) return; 
+      if (!user) {
+        setIsLoading(false);
+        return; 
+      }
 
       setIsLoading(true);
       try {
-        loadCompanies()
-        loadBookings()
-        loadBlockedSchedule()
+        await Promise.all([
+          loadCompanies(),
+          loadBookings(),
+          loadBlockedSchedule()
+        ]);
       } catch (err) {
-        console.log(err)
+        console.error("Gagal memuat data:", err);
+        if (err.response?.status === 401) {
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadData();
-  }, [user]); // Hanya run saat user berubah (login/logout)
+  }, [user]);
   /* ================= COMPANY ================= */
 
   const saveCompany = async () => {
@@ -211,7 +218,7 @@ export default function Booking() {
   /* ================= MAIN UI ================= */
 
   return (
-    <div style={s.container}>
+    (!isLoading && <div style={s.container}>
 
       {bookings.length > 0 && (
         <Card title="Your Current Booking" active={openCards[10]} onClick={() => setOpenCards({ ...openCards, 10: !openCards[10] })}>
@@ -673,7 +680,7 @@ export default function Booking() {
       )}
 
     </div>
-  )
+  ))
 }
 
 /* ================= CARD COMPONENT ================= */
