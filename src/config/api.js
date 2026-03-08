@@ -3,8 +3,8 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:50
 
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: '/api/auth/login',
-  REGISTER: '/api/auth/register',
+  LOGIN: '/login',
+  REGISTER: '/register',
   
   // Projects
   PROJECTS_SYNC: '/api/projects/sync',
