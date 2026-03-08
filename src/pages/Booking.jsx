@@ -66,9 +66,15 @@ export default function Booking() {
   }
 
   const loadBookings = async () => {
-    const data = await apiService.get("/bookings")
-    setBookings(data)
-  }
+    try {
+      const data = await apiService.get("/bookings");
+      // Pastikan data adalah array. Jika null/undefined, set ke []
+      setBookings(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Gagal load bookings:", err);
+      setBookings([]); // Penting: cegah crash saat mapping di UI
+    }
+  };
 
   const loadBlockedSchedule = async () => {
     const data = await apiService.get("/schedule")
@@ -572,7 +578,7 @@ export default function Booking() {
                   const mesinNeeded = Math.ceil(totalQty / 5);
 
                   // 1. Data dari server sesuai kategori aktif
-
+                  if (!booking.selected_date || !blockedScheduleInit) return null;
                   let blockedData = editingBookingId ? blockedScheduleEdit : blockedScheduleInit
                   const jamData = blockedData[booking.selected_date]?.[timeStr] || { BAJA: 0, BETON: 0 };
                   let serverBlockedCount = jamData[kat] || 0;
