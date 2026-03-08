@@ -18,7 +18,7 @@ export const API_ENDPOINTS = {
   // Units (Alternative structure)
   UNITS: '/api/booking',
   UNITS_SYNC: '/api/booking/sync',
-  BOOKED_SCHEDULES: '/api/booked-schedules',
+  BOOKED_SCHEDULES: '/schedule-all',
 };
 
 export const HTTP_STATUS = {

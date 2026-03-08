@@ -270,6 +270,7 @@ export default function Booking() {
             onClick={(e) => {
               e.stopPropagation()
               setActiveCompanyAction(!activeCompanyAction)
+              setOpenCards({ ...openCards, 1: true })
             }}
           >
             ⚙️

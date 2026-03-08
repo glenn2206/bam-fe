@@ -1,111 +1,85 @@
 import React, { useState, useEffect } from 'react';
-import { useBooking } from '../hooks/useBooking';
+import apiService from '../services/api.service';
 
 const Jadwal = () => {
   const [bookedData, setBookedData] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const { getBookedSchedules } = useBooking();
+  const [showBaja, setShowBaja] = useState(true);
+  const [showBeton, setShowBeton] = useState(true);
+  const [onlyMine, setOnlyMine] = useState(false);
 
-  // 1. Hit API untuk ambil jadwal terisi
   useEffect(() => {
-    const fetchSchedules = async () => {
-      try {
-        const data = await getBookedSchedules();
-        setBookedData(data);
-      } catch (err) {
-        console.error("Gagal mengambil jadwal:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchSchedules();
+    apiService.get("/schedule-all").then((res) => {
+      // res.data diasumsikan adalah object scheduleMap
+      setBookedData(res.data || res); 
+    });
   }, []);
 
-  // 2. Helper untuk generate list tanggal (misal 14 hari ke depan)
-  const getNextTwoWeeks = () => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 0; i < 16; i++) {
-      const d = new Date();
-      d.setDate(today.getDate() + i);
-      dates.push(d.toISOString().split('T')[0]);
-    }
-    return dates;
+  const getDates = () => Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    return d.toISOString().split('T')[0];
+  });
+
+  const getFilteredBookings = (dateStr) => {
+    const day = bookedData[dateStr] || {};
+    let merged = [];
+
+    // Kelompokkan berdasarkan PT dan Kategori
+    Object.entries(day).forEach(([time, cats]) => {
+      ['BAJA', 'BETON'].forEach(kat => {
+        if ((kat === 'BAJA' && !showBaja) || (kat === 'BETON' && !showBeton)) return;
+        
+        cats[kat].forEach(item => {
+          // Cari apakah sudah ada di array merged (sama PT dan kategori)
+          const existing = merged.find(m => m.nama_pt === item.nama_pt && m.kat === kat);
+          
+          if (existing) {
+            // Jika ada, tambahkan jamnya ke array times jika belum ada
+            if (!existing.times.includes(time)) existing.times.push(time);
+          } else {
+            // Jika belum, buat entry baru
+            merged.push({ ...item, kat, times: [time] });
+          }
+        });
+      });
+    });
+
+    return onlyMine ? merged.filter(i => i.is_my_booking) : merged;
   };
 
-  const datesToDisplay = getNextTwoWeeks();
-
-  if (isLoading) return <div className="p-10 text-center animate-pulse">Memuat Kapasitas Lab...</div>;
-
   return (
-    <div className="bg-slate-50 p-6 rounded-xl shadow-inner border border-slate-200">
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-xl">📅</span>
-        <h2 className="font-bold text-slate-800 uppercase tracking-tight">Monitoring Kapasitas Lab (2 Minggu)</h2>
+    <div className="max-w-6xl mx-auto p-6 font-sans text-slate-800">
+      <h2 className="text-2xl font-black mb-6 tracking-tight">JADWAL LABORATORIUM</h2>
+      
+      <div className="flex flex-wrap gap-3 mb-8 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <button onClick={() => setShowBaja(!showBaja)} className={`px-4 py-2 rounded-lg text-xs font-bold ${showBaja ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}>BAJA</button>
+        <button onClick={() => setShowBeton(!showBeton)} className={`px-4 py-2 rounded-lg text-xs font-bold ${showBeton ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}>BETON</button>
+        <button onClick={() => setOnlyMine(!onlyMine)} className={`px-4 py-2 rounded-lg text-xs font-bold ${onlyMine ? 'bg-amber-500 text-white' : 'bg-slate-100'}`}>JADWAL SAYA</button>
       </div>
 
-{/* GRID CONTAINER */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-  {datesToDisplay.map((dateStr) => {
-    const bookings = bookedData[dateStr] || [];
-    const dateObj = new Date(dateStr);
-    const dayLabel = dateObj.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
-    const isToday = dateStr === new Date().toISOString().split('T')[0];
-
-    return (
-      <div 
-        key={dateStr} 
-        // Tambahkan h-64 untuk tinggi seragam dan flex-col agar layout konsisten
-        className={`bg-white rounded-lg border transition-all shadow-sm flex flex-col h-64 
-          ${isToday ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200'}`}
-      >
-        {/* Header Tanggal */}
-        <div className={`p-2 text-center border-b font-bold text-xs uppercase tracking-tighter shrink-0
-          ${isToday ? 'bg-blue-500 text-white' : 'bg-slate-50 text-slate-600'}`}>
-          {dayLabel}
-        </div>
-
-        {/* List Booking - Dengan overflow-y-auto agar bisa di-scroll kalau penuh */}
-        <div className="p-3 flex flex-col gap-3 overflow-y-auto flex-grow scrollbar-thin scrollbar-thumb-slate-200">
-          {bookings.length > 0 ? (
-            bookings.map((b, idx) => (
-              <div 
-                key={idx} 
-                className="flex flex-col border-l-4 border-red-500 bg-red-50 p-2 rounded-r shadow-sm shrink-0"
-              >
-                <div className="flex justify-between items-start mb-1 gap-1">
-                  <span className="text-[10px] font-black text-slate-700 uppercase leading-tight break-words">
-                    {b.perusahaan}
-                  </span>
-                  {b.kategori && (
-                    <span className="text-[8px] font-bold bg-white px-1 rounded border border-red-200 text-red-500 shrink-0">
-                      {b.kategori}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {b.slots && b.slots.sort().map((slot, sIdx) => (
-                    <span 
-                      key={sIdx} 
-                      className="text-[9px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded"
-                    >
-                      {slot}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="flex-grow flex items-center justify-center">
-              <span className="text-[10px] italic text-slate-300 font-medium font-sans">Tersedia</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {getDates().map((dateStr) => (
+          <div key={dateStr} className="bg-white rounded-xl border border-slate-200 shadow-sm h-[320px] flex flex-col overflow-hidden">
+            <div className="p-3 bg-slate-50 border-b font-black text-[10px] text-center uppercase text-slate-500">
+              {new Date(dateStr).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}
             </div>
-          )}
-        </div>
+            <div className="p-2 flex flex-col gap-2 overflow-y-auto">
+              {getFilteredBookings(dateStr).map((b, i) => (
+                <div key={i} className={`p-3 rounded-lg border text-[11px] font-bold ${b.is_my_booking ? 'border-amber-400 bg-amber-50' : 'border-slate-100 bg-slate-50'}`}>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-slate-800 truncate">{b.nama_pt}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {b.times.sort().map(t => (
+                        <span key={t} className="bg-white border px-1 rounded text-[9px] text-slate-600">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className={`mt-2 inline-block text-[9px] px-1.5 py-0.5 rounded ${b.kat === 'BAJA' ? 'bg-slate-800 text-white' : 'bg-slate-200'}`}>{b.kat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-    );
-  })}
-</div>
     </div>
   );
 };
