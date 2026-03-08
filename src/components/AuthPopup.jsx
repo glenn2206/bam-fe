@@ -53,7 +53,7 @@ const AuthPopup = ({ isOpen, onClose }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input 
-              type="text" 
+              type="number" 
               placeholder="Nomor WhatsApp (Contoh: 0812...)" 
               required
               value={form.no_hp}
@@ -74,6 +74,7 @@ const AuthPopup = ({ isOpen, onClose }) => {
             
             <input 
               type="password" 
+              inputmode="numeric"
               placeholder="Password (min. 6 karakter)" 
               required
               value={form.password}
