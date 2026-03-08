@@ -3,9 +3,6 @@ import { db } from '../helper';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/api.service';
 
-const API = "http://localhost:5000"
-
-
 
 const today = () => new Date().toISOString().split("T")[0]
 const next14 = () => {
@@ -17,7 +14,7 @@ export default function Booking() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [blockedScheduleInit, setBlockedScheduleInit] = useState({})
-  const [blockedScheduleEdit, setBlockedScheduleEdit] = useState({})
+  const [blockedScheduleEdit, setBlockedScheduleEdit] = useState(blockedScheduleInit)
   const [companies, setCompanies] = useState([])
   const [bookings, setBookings] = useState([])
 
@@ -567,7 +564,9 @@ export default function Booking() {
                   const mesinNeeded = Math.ceil(totalQty / 5);
 
                   // 1. Data dari server sesuai kategori aktif
-                  const jamData = blockedScheduleEdit[booking.selected_date]?.[timeStr] || { BAJA: 0, BETON: 0 };
+
+                  let blockedData = editingBookingId ? blockedScheduleEdit : blockedScheduleInit
+                  const jamData = blockedData[booking.selected_date]?.[timeStr] || { BAJA: 0, BETON: 0 };
                   let serverBlockedCount = jamData[kat] || 0;
 
                   // 2. Hitung penggunaan USER saat ini untuk kategori AKTIF di jam ini
@@ -660,6 +659,7 @@ export default function Booking() {
                     loadBookings()
                     loadBlockedSchedule()
                     setBooking({ company: null, kategori: "", items: [], selected_date: "", selected_slots: [] })
+                    setOpenCards({ 1: true, 2: false, 3: false, 4: false });
                   }
                 }}
               >
