@@ -283,7 +283,7 @@ export default function Booking() {
                 style={{ ...s.btn, background: "#6b7280", padding: 5, flex: 1, minWidth: 90 }}
                 onClick={() => startEditBooking(b)}
               >
-                Edit
+                Reschedule
               </button>
               <button
                 style={{ ...s.btn, background: "#dc2626", padding: 5, flex: 1, minWidth: 90 }}
@@ -721,9 +721,9 @@ export default function Booking() {
     (!isLoading && <div style={s.container}>
       {renderBookingList()}
       <style>{`.no-scroll::-webkit-scrollbar{display:none}`}</style>
-      {renderCompanyCard()}
-      {booking.company && renderCategoryCard()}
-      {booking.kategori && renderMaterialCard()}
+      {!editingBookingId && renderCompanyCard()}
+      {!editingBookingId && booking.company && renderCategoryCard()}
+      {!editingBookingId && booking.kategori && renderMaterialCard()}
       {booking.items.length > 0 && renderScheduleCard()}
       {booking.selected_slots.length > 0 && renderPaymentCard()}
     </div>)
