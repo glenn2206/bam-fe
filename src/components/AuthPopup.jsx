@@ -53,12 +53,15 @@ const AuthPopup = ({ isOpen, onClose }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input 
-              type="number" 
+              type="tel" 
+              inputMode="numeric"
+              pattern="[0-9+]*"
               placeholder="Nomor WhatsApp (Contoh: 0812...)" 
               required
               value={form.no_hp}
               className="w-full p-4 border-2 border-slate-100 rounded-2xl focus:border-sky-500 outline-none transition-all"
               onChange={(e) => setForm({...form, no_hp: e.target.value})}
+              autoComplete="tel"
             />
 
             {isRegister && (

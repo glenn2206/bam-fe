@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
-import PublicRoute from './components/PublicRoute';
 
 // Pages
 import Booking from './pages/Booking';
@@ -36,12 +35,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route 
               path="/jadwal" 
               element={
-                <Jadwal />
+                <ProtectedRoute>
+                  <Jadwal />
+                </ProtectedRoute>
               } 
             />
             
-            {/* Public Route */}
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             
             {/* 404 - Redirect to booking */}
             <Route path="*" element={<Navigate to="/booking" replace />} />

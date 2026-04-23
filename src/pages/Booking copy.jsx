@@ -22,9 +22,7 @@ const initialBooking = {
   kategori: "",
   items: [],
   selected_date: "",
-  selected_slots: [],
-  reschedule: false,
-  payment_method: ""
+  selected_slots: []
 };
 
 const initialMatForm = {
@@ -33,8 +31,6 @@ const initialMatForm = {
   dimensi: "",
   mutu: "",
   uji: "",
-  caping: false,
-  dibubut: false,
   isEditing: true
 };
 
@@ -43,30 +39,14 @@ const initialOpenCards = {
   2: false,
   3: false,
   4: false,
-  5: false,
   10: false
 };
 
 const getTotalQty = (items) => items.reduce((sum, item) => sum + (item.qty || 0), 0);
 const getMesinNeeded = (items) => Math.ceil(getTotalQty(items) / 5);
 
-const diffDays = (dateString) => {
-  const target = new Date(dateString);
-  const now = new Date();
-  target.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
-  return Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-};
-
-const getReschedulePenalty = (daysUntil) => {
-  if (daysUntil >= 3) return { points: 0, note: "Reschedule h-3 free", dpLost: false };
-  if (daysUntil === 2) return { points: -1, note: "Reschedule H-2: Credit Score berkurang 1", dpLost: false };
-  if (daysUntil === 1) return { points: -2, note: "Reschedule H-1: Credit Score -2 & DP Hangus 50%", dpLost: true };
-  return { points: -3, note: "Reschedule Hari-H: Credit Score -3 & DP Hangus 50%", dpLost: true };
-};
-
 export default function Booking() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [blockedScheduleInit, setBlockedScheduleInit] = useState({});
   const [blockedScheduleEdit, setBlockedScheduleEdit] = useState(blockedScheduleInit);
@@ -76,20 +56,14 @@ export default function Booking() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState(null);
   const [activeCompanyAction, setActiveCompanyAction] = useState(null);
-  const [originalSelectedDate, setOriginalSelectedDate] = useState("");
 
   const [compForm, setCompForm] = useState(initialCompForm);
   const [booking, setBooking] = useState(initialBooking);
   const [editingBookingId, setEditingBookingId] = useState(null);
   const [matForm, setMatForm] = useState(initialMatForm);
   const [openCards, setOpenCards] = useState(initialOpenCards);
-  const [creditScore, setCreditScore] = useState(user?.credit_score ?? 5);
 
-  const isAdmin = user?.role === 'admin' || user?.is_admin;
-
-  useEffect(() => {
-    setCreditScore(user?.credit_score ?? 5);
-  }, [user]);
+  /* ================= LOAD DATA ================= */
 
   const loadCompanies = async () => {
     const data = await apiService.get("/companies");
@@ -103,7 +77,7 @@ export default function Booking() {
   const loadBookings = async () => {
     try {
       const data = await apiService.get("/bookings");
-      setBookings(Array.isArray(data) ? data.map((item) => ({ reschedule: false, payment_method: "", ...item })) : []);
+      setBookings(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Gagal load bookings:", err);
       setBookings([]);
@@ -148,6 +122,8 @@ export default function Booking() {
 
     loadData();
   }, [user]);
+
+  /* ================= COMPANY ================= */
 
   const saveCompany = async () => {
     const payload = {
@@ -215,7 +191,6 @@ export default function Booking() {
 
     setBlockedScheduleEdit(newBlockedSchedule);
     setEditingBookingId(b.id);
-    setOriginalSelectedDate(b.selected_date || "");
     setBooking({
       company: {
         id: b.company_id,
@@ -225,11 +200,10 @@ export default function Booking() {
       kategori: b.kategori,
       items: b.unit_rows || [],
       selected_date: b.selected_date,
-      selected_slots: b.selected_slots || [],
-      reschedule: b.reschedule || false,
-      payment_method: b.payment_method || ""
+      selected_slots: b.selected_slots || []
     });
-    setOpenCards({ 1: false, 2: false, 3: true, 4: true, 5: true });
+
+    setOpenCards({ 1: false, 2: false, 3: true, 4: true });
   };
 
   const deleteBooking = async (id) => {
@@ -246,16 +220,6 @@ export default function Booking() {
     });
   };
 
-  const adminUpdateTests = async (b) => {
-    const updatedItems = b.unit_rows.map((item, idx) => {
-      const newTest = window.prompt(`Uji untuk item ${idx + 1} (${item.sample}):`, item.uji || "");
-      return { ...item, uji: newTest || item.uji };
-    });
-
-    await apiService.put("/booking/" + b.id, { ...b, unit_rows: updatedItems });
-    loadBookings();
-  };
-
   const renderBookingList = () => {
     if (!bookings.length) return null;
 
@@ -263,42 +227,28 @@ export default function Booking() {
       <Card title="Your Current Booking" active={openCards[10]} onClick={() => setOpenCards({ ...openCards, 10: !openCards[10] })}>
         {bookings.map(b => (
           <div key={b.id} style={{ borderBottom: "1px solid #eee", padding: "8px 0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              {b.reschedule && <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#dc2626" }} />}
-              <span style={{ fontWeight: "bold" }}>{b.kategori}</span>
-              {b.reschedule && <span style={{ fontSize: 11, color: "#dc2626" }}>Rescheduled</span>}
-            </div>
+            <div>{b.kategori}</div>
             <div style={{ fontSize: 10 }}>
               {b.selected_date} | {[...new Set(b.selected_slots?.map(slot => slot.time))].join(", ")}
             </div>
             {b.unit_rows.map((it, i) => (
               <div key={i} style={{ fontSize: 12 }}>
                 <span>{`${it.sample}(${it.merk})->${it.qty} pc`}</span>
-                {it.caping !== undefined && <span>{` • Caping: ${it.caping ? 'Ya' : 'Tidak'}`}</span>}
-                {it.dibubut !== undefined && <span>{` • Dibubut: ${it.dibubut ? 'Ya' : 'Tidak'}`}</span>}
               </div>
             ))}
-            <div style={{ display: "flex", gap: 5, marginTop: 5, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
               <button
-                style={{ ...s.btn, background: "#6b7280", padding: 5, flex: 1, minWidth: 90 }}
+                style={{ ...s.btn, background: "#6b7280", padding: 5 }}
                 onClick={() => startEditBooking(b)}
               >
                 Edit
               </button>
               <button
-                style={{ ...s.btn, background: "#dc2626", padding: 5, flex: 1, minWidth: 90 }}
+                style={{ ...s.btn, background: "#dc2626", padding: 5 }}
                 onClick={() => deleteBooking(b.id)}
               >
                 Delete
               </button>
-              {isAdmin && (
-                <button
-                  style={{ ...s.btn, background: "#f59e0b", padding: 5, flex: 1, minWidth: 90 }}
-                  onClick={() => adminUpdateTests(b)}
-                >
-                  Update Uji
-                </button>
-              )}
             </div>
           </div>
         ))}
@@ -336,15 +286,15 @@ export default function Booking() {
           </button>
 
           {activeCompanyAction && (
-            <div style={{ display: "flex", gap: 5, marginTop: 5, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
               <button
-                style={{ ...s.btn, background: "#6b7280", padding: 5, flex: 1, minWidth: 90 }}
+                style={{ ...s.btn, background: "#6b7280", padding: 5 }}
                 onClick={() => editCompany(c)}
               >
                 Edit
               </button>
               <button
-                style={{ ...s.btn, background: "#dc2626", padding: 5, flex: 1, minWidth: 90 }}
+                style={{ ...s.btn, background: "#dc2626", padding: 5 }}
                 onClick={() => deleteCompany(c.id)}
               >
                 Delete
@@ -399,8 +349,6 @@ export default function Booking() {
       {booking.items.map((it, i) => (
         <div key={i} style={s.item}>
           <span>{it.sample}|{it.merk}|{it.dimensi}|{it.qty}</span>
-          {it.caping !== undefined && <span>{` • Caping: ${it.caping ? 'Ya' : 'Tidak'}`}</span>}
-          {it.dibubut !== undefined && <span>{` • Dibubut: ${it.dibubut ? 'Ya' : 'Tidak'}`}</span>}
           <span style={{ cursor: "pointer" }} onClick={() => removeItem(i)}>❌</span>
         </div>
       ))}
@@ -413,8 +361,7 @@ export default function Booking() {
       ) : (
         <div style={s.fade}>
           <select style={s.in}
-            value={matForm.sample || ""}
-            onChange={e => setMatForm({ ...matForm, sample: e.target.value, caping: false, dibubut: false })}>
+            onChange={e => setMatForm({ ...matForm, sample: e.target.value })}>
             <option value="">Pilih Sub-Kategori</option>
             {Object.keys(db[booking.kategori]).map(k => (
               <option key={k}>{k}</option>
@@ -461,28 +408,6 @@ export default function Booking() {
                 );
               })}
 
-              {booking.kategori === 'BETON' && (
-                <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={matForm.caping}
-                    onChange={e => setMatForm({ ...matForm, caping: e.target.checked })}
-                  />
-                  <span>Caping?</span>
-                </label>
-              )}
-
-              {booking.kategori === 'BAJA' && matForm.sample === 'PLATE' && (
-                <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={matForm.dibubut}
-                    onChange={e => setMatForm({ ...matForm, dibubut: e.target.checked })}
-                  />
-                  <span>Dibubut di BAM?</span>
-                </label>
-              )}
-
               <input
                 type="number"
                 min="1"
@@ -520,54 +445,19 @@ export default function Booking() {
     const materialCovered = Math.min(selectedSlotsCount * 5, totalQty);
     const isDone = selectedSlotsCount >= mesinNeeded;
     const isReady = selectedSlotsCount >= mesinNeeded;
-    // Hitung penalty dari tanggal LAMA (originalSelectedDate) ke hari ini, bukan dari tanggal baru
-    const daysUntilOldDate = editingBookingId && originalSelectedDate ? diffDays(originalSelectedDate) : null;
-    const rescheduleInfo = editingBookingId && daysUntilOldDate !== null ? getReschedulePenalty(daysUntilOldDate) : null;
 
     return (
-      <Card title="4. Jadwal Uji" active={openCards[4]} onClick={() => setOpenCards({ ...openCards, 4: !openCards[4] })} sum={booking.selected_date}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 12 }}>
-            <b>Credit Score:</b> {creditScore}
-          </div>
-          {editingBookingId && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />
-              <span style={{ fontSize: 12, color: "#dc2626" }}>Reschedule aktif</span>
-            </div>
-          )}
-        </div>
-
+      <Card title="4. Jadwal Uji" active={openCards[4]} onClick={() => setOpenCards({ ...openCards, 4: !openCards[4] })}>
         <input type="date" style={s.in}
           min={today()} max={next14()}
           value={booking.selected_date}
           onChange={e => setBooking({ ...booking, selected_date: e.target.value })}
         />
 
-        {editingBookingId && rescheduleInfo && (
-          <div style={{ marginTop: 10, padding: 10, background: "#fef2f2", borderRadius: 8, border: "1px solid #fecaca", fontSize: 12, color: "#991b1b" }}>
-            ⚠️ {rescheduleInfo.note} ({daysUntilOldDate} hari ke jadwal lama)
-          </div>
-        )}
-
-        <div style={{ marginTop: 15, padding: 12, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-          <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8 }}>Aturan Reschedule & Credit Score</div>
-          <ul style={{ fontSize: 12, paddingLeft: 18, margin: 0, color: "#334155" }}>
-            <li>H-3 reschedule free, tidak mengurangi credit score.</li>
-            <li>H-2 reschedule → credit score -1.</li>
-            <li>H-1 reschedule → credit score -2 dan DP hangus 50%.</li>
-            <li>Tidak datang tanpa pemberitahuan → credit score -3 dan DP hangus 50%.</li>
-          </ul>
-          {rescheduleInfo && editingBookingId && (
-            <div style={{ marginTop: 10, fontSize: 12, color: daysUntilOldDate <= 1 ? "#b91c1c" : "#334155" }}>
-              {rescheduleInfo.note} ({daysUntilOldDate} hari lagi)
-            </div>
-          )}
-        </div>
-
         {booking.selected_date && (
           <>
-            <div style={{ margin: "15px 0", padding: "12px", background: isDone ? "#ecfdf5" : "#fffbeb",
+            <div style={{
+              margin: "15px 0", padding: "12px", background: isDone ? "#ecfdf5" : "#fffbeb",
               borderRadius: 10, border: `1px solid ${isDone ? "#10b981" : "#f59e0b"}`
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
@@ -664,25 +554,13 @@ export default function Booking() {
             const data = await apiService[method](url, booking);
 
             if (data) {
-              const backendMessage = data.message || (editingBookingId ? "Booking updated" : "Booking berhasil");
-
-              const daysUntilOld = editingBookingId && originalSelectedDate ? diffDays(originalSelectedDate) : null;
-
-              if (daysUntilOld !== null) {
-                const penalty = daysUntilOld >= 3 ? 0 : (daysUntilOld === 2 ? 1 : 2);
-  
-                const newScore = Math.max(0, user.credit_score - penalty);
-                
-                updateUser({ credit_score: newScore });
-              }
-              
-              alert(backendMessage);
+              alert(editingBookingId ? "Booking updated" : "Booking berhasil");
               setEditingBookingId(null);
               setBlockedScheduleEdit(blockedScheduleInit);
               loadBookings();
               loadBlockedSchedule();
               setBooking(initialBooking);
-              setOpenCards({ 1: true, 2: false, 3: false, 4: false, 5: false });
+              setOpenCards({ 1: true, 2: false, 3: false, 4: false });
             }
           }}
         >
@@ -692,31 +570,6 @@ export default function Booking() {
     );
   };
 
-  const renderPaymentCard = () => (
-    <Card title="5. Invoice & Pembayaran" active={openCards[5]} onClick={() => setOpenCards({ ...openCards, 5: !openCards[5] })} sum={booking.payment_method}>
-      <div style={{ marginBottom: 10, fontSize: 12, color: "#334155" }}>
-        Pilih metode pembayaran mock: QRIS, VA, GOPAY, atau OVO. Fokus ke QRIS dan VA.
-      </div>
-      {['QRIS', 'VA', 'GOPAY', 'OVO'].map(method => (
-        <button
-          key={method}
-          style={{
-            ...s.btn,
-            background: booking.payment_method === method ? '#0f766e' : '#2563eb',
-            marginTop: 5,
-            padding: 10
-          }}
-          onClick={() => setBooking({ ...booking, payment_method: method })}
-        >
-          {method}
-        </button>
-      ))}
-      <div style={{ fontSize: 11, marginTop: 12, color: '#475569' }}>
-        Pembayaran mock saja: tidak terkoneksi ke gateway nyata.
-      </div>
-    </Card>
-  );
-
   return (
     (!isLoading && <div style={s.container}>
       {renderBookingList()}
@@ -725,7 +578,6 @@ export default function Booking() {
       {booking.company && renderCategoryCard()}
       {booking.kategori && renderMaterialCard()}
       {booking.items.length > 0 && renderScheduleCard()}
-      {booking.selected_slots.length > 0 && renderPaymentCard()}
     </div>)
   );
 }

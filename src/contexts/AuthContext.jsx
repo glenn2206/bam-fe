@@ -80,9 +80,19 @@ export const AuthProvider = ({ children }) => {
    * Logout user
    */
   const logout = () => {
-    localStorage.clear();
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER);
     setToken(null);
     setUser(null);
+  };
+
+  /**
+   * Update user data (e.g., credit score)
+   */
+  const updateUser = (newUserData) => {
+    const updatedUser = { ...user, ...newUserData };
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    setUser(updatedUser);
   };
 
   /**
@@ -99,6 +109,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated,
   };
 
